@@ -1,0 +1,1363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080710" />
+    <title>Earth Index</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #fbf4ff;
+        --muted: #c9bbdf;
+        --lime: #d4ff32;
+        --blue: #22d7ff;
+        --pink: #ff35be;
+        --night: #080710;
+        --ambient-wash: #080710;
+        --photo-accent: #19486a;
+        --mono: "DM Mono", monospace;
+        --sans: "Manrope", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 320px; background: var(--night); scroll-behavior: smooth; scroll-snap-type: y proximity; }
+      body {
+        min-width: 320px;
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        font-family: var(--sans);
+        background-color: color-mix(in srgb, var(--ambient-wash) 30%, var(--night));
+        background-image: radial-gradient(rgba(212, 190, 255, 0.13) 0.7px, transparent 0.7px), linear-gradient(90deg, rgba(181, 146, 255, 0.035) 1px, transparent 1px);
+        background-size: 19px 19px, 76px 76px;
+        transition: background-color 500ms ease;
+      }
+      button { font: inherit; }
+      button:focus-visible, a:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
+      .photo-world { position: fixed; z-index: 0; inset: 0; overflow: hidden; background: #080710; pointer-events: none; }
+      .photo-layer { position: absolute; inset: -3%; width: 106%; height: 106%; object-fit: cover; object-position: var(--photo-position, center); opacity: 0; filter: brightness(0.56) saturate(1.32) contrast(1.12) hue-rotate(var(--photo-hue, 0deg)); transform: scale(1.075); transition: opacity 1300ms cubic-bezier(0.22, 0.7, 0.18, 1), object-position 1800ms ease, filter 1200ms ease, transform 8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+      .photo-layer.is-current { opacity: 1; transform: scale(1); }
+      .photo-grade { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(8, 7, 16, 0.78), rgba(8, 7, 16, 0.3) 43%, rgba(8, 7, 16, 0.03) 78%), linear-gradient(0deg, rgba(8, 7, 16, 0.66), transparent 31%, rgba(8, 7, 16, 0.12) 100%), linear-gradient(135deg, color-mix(in srgb, var(--photo-accent, #22d7ff) 19%, transparent), transparent 67%); mix-blend-mode: screen; opacity: 0.72; transition: opacity 600ms ease; }
+      #earth-scene { position: fixed; z-index: 1; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+      .veil { position: fixed; z-index: 2; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(8, 7, 16, 0.43), rgba(8, 7, 16, 0.2) 34%, rgba(8, 7, 16, 0.01) 68%, rgba(8, 7, 16, 0.1)); }
+      .topbar {
+        position: fixed;
+        z-index: 5;
+        top: 0;
+        right: 0;
+        left: 0;
+        display: flex;
+        height: 72px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 44px;
+        border-bottom: 1px solid rgba(232, 221, 255, 0.2);
+        background: rgba(9, 7, 18, 0.78);
+        backdrop-filter: blur(14px);
+      }
+      .brand { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
+      .brand-mark { position: relative; width: 27px; height: 27px; overflow: hidden; border: 1px solid var(--pink); border-radius: 50%; background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 18px rgba(255, 53, 190, 0.38); }
+      .brand-mark::before, .brand-mark::after { position: absolute; top: 4px; bottom: 4px; left: 7px; width: 11px; border: 1px solid var(--blue); border-radius: 50%; content: ""; }
+      .brand-mark::after { top: 11px; right: 2px; bottom: auto; left: 2px; width: auto; height: 4px; border-width: 1px 0 0; border-radius: 50%; }
+      .brand-name { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; }
+      .brand-name small { display: block; margin-top: 3px; color: var(--muted); font-family: var(--mono); font-size: 8px; font-weight: 400; letter-spacing: 0.12em; }
+      .top-meta { display: flex; align-items: center; gap: 9px; color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: 0.11em; text-transform: uppercase; }
+      .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 13px rgba(212, 255, 50, 0.8); }
+      .menu-button { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid rgba(34, 215, 255, 0.68); border-radius: 50%; background: rgba(255, 255, 255, 0.04); color: var(--blue); cursor: pointer; transition: transform 180ms ease, background 180ms ease; }
+      .menu-button:hover { background: rgba(34, 215, 255, 0.13); transform: rotate(-8deg); }
+      .menu-button svg { width: 14px; height: 14px; }
+      .progress { position: fixed; z-index: 6; top: 72px; left: 0; width: 100%; height: 3px; background: rgba(229, 217, 255, 0.15); }
+      .progress span { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #d4ff32, #22d7ff, #ff35be, #ff781e); box-shadow: 0 0 13px rgba(34, 215, 255, 0.8); }
+
+      .journey { position: relative; z-index: 3; }
+      .chapter { position: relative; display: flex; min-height: 112svh; align-items: center; padding: 110px 10vw 86px; scroll-snap-align: start; }
+      .chapter:first-child { min-height: 100svh; }
+      .chapter-copy { width: min(42vw, 480px); }
+      .chapter-tag { display: flex; align-items: center; gap: 10px; margin: 0 0 22px; color: var(--pink); font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; }
+      .chapter-tag::before { width: 27px; height: 1px; background: var(--pink); content: ""; }
+      h1, h2 { margin: 0; font-weight: 500; letter-spacing: 0; }
+      h1 { max-width: 540px; font-size: clamp(56px, 8vw, 112px); line-height: 0.86; }
+      h1 span { color: var(--blue); }
+      .hero-mark { display: block; margin-top: 28px; color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; }
+      .ghost-index { position: absolute; right: 9vw; bottom: 9vh; color: rgba(239, 228, 255, 0.3); font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; }
+      .chapter:nth-child(odd) { justify-content: flex-end; }
+      .chapter:nth-child(even) { justify-content: flex-start; }
+      .chapter:nth-child(even) .ghost-index { right: auto; left: 10vw; }
+      .empty-field { width: min(420px, 38vw); min-height: 24vh; }
+      .chapter:not(:first-child) { min-height: 116svh; }
+      .goal-chapter { justify-content: flex-start; }
+      .goal-chapter[data-side="right"] { justify-content: flex-end; }
+      .sdg-card {
+        position: relative;
+        width: min(580px, 46vw);
+        overflow: visible;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        opacity: 0.9;
+        transform: translateY(10px) scale(0.99);
+        transition: opacity 420ms ease, transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .goal-chapter.is-active .sdg-card { opacity: 1; transform: translateY(0) scale(1); }
+      .goal-chapter.is-hovered .sdg-card { transform: translateY(-5px) scale(1.01); }
+      .goal-bubbles { position: absolute; z-index: 0; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
+      .goal-chapter.is-hovered .goal-bubbles { opacity: 1; }
+      .sdg-card > :not(.goal-bubbles) { position: relative; z-index: 1; }
+      .goal-bubbles span { position: absolute; bottom: -18px; display: block; border: 1.5px solid color-mix(in srgb, var(--goal-color) 62%, white); border-radius: 50%; background: rgba(255, 255, 255, 0.08); box-shadow: inset 2px 2px 2px rgba(255, 255, 255, 0.7); opacity: 0; }
+      .goal-bubbles span::after { position: absolute; top: 20%; left: 22%; width: 3px; height: 3px; border-radius: 50%; background: #fff; content: ""; }
+      .goal-chapter.is-hovered .goal-bubbles span { animation: bubble-rise 1.8s ease-in infinite; }
+      @keyframes bubble-rise { 0% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.55); } 18% { opacity: 0.85; } 78% { opacity: 0.65; } 100% { opacity: 0; transform: translate3d(var(--bubble-drift), -190px, 0) scale(1.12); } }
+      .goal-kicker { display: flex; align-items: center; gap: 11px; margin: 0 0 18px; color: #f2d9ff; font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.13em; text-shadow: 0 2px 16px #080710; text-transform: uppercase; }
+      .goal-number { display: inline; width: auto; height: auto; border: 0; border-radius: 0; background: transparent; color: var(--goal-color); font-size: 12px; transition: color 350ms ease; }
+      .goal-chapter.is-hovered .goal-number { background: transparent; color: var(--goal-color); transform: translateY(-2px); }
+      .goal-title { max-width: 590px; margin: 0; color: #fff8ff; font-size: clamp(38px, 4.4vw, 68px); font-weight: 700; line-height: 0.98; text-shadow: 0 4px 32px rgba(8, 7, 16, 0.88), 0 1px 3px rgba(8, 7, 16, 0.9); }
+      .goal-summary { max-width: 500px; margin: 20px 0 0; color: #fff4ff; font-size: 16px; line-height: 1.65; text-shadow: 0 2px 18px rgba(8, 7, 16, 0.98), 0 1px 3px rgba(8, 7, 16, 0.9); }
+      .goal-focus { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; }
+      .goal-focus li { padding: 0; border: 0; border-radius: 0; background: transparent; color: #eee0ff; font-family: var(--mono); font-size: 9px; letter-spacing: 0.02em; text-shadow: 0 1px 12px #080710; }
+      .goal-focus li + li::before { margin-right: 10px; color: var(--goal-color); content: "/"; }
+      .goal-source { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; color: #fff; font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-decoration: none; text-transform: uppercase; text-shadow: 0 1px 12px #080710; text-underline-offset: 4px; }
+      .goal-source::after { content: "↗"; font-size: 12px; }
+      .goal-source:hover { color: #b52e78; text-decoration: underline; }
+
+      .compact-layout .topbar { height: 60px; padding: 0 18px; }
+      .compact-layout .top-meta { display: none; }
+      .compact-layout .progress { top: 60px; }
+      .compact-layout .chapter, .compact-layout .chapter:first-child, .compact-layout .chapter:not(:first-child) { min-height: 100svh; align-items: flex-end; padding: 0 24px 17vh; }
+      .compact-layout .chapter:nth-child(odd), .compact-layout .chapter:nth-child(even) { justify-content: flex-start; }
+      .compact-layout .chapter-copy { width: min(460px, 100%); }
+      .compact-layout .goal-chapter[data-side="right"] { justify-content: flex-start; }
+      .compact-layout .sdg-card { width: min(460px, 100%); padding: 0; }
+      .compact-layout .goal-title { font-size: clamp(32px, 9vw, 44px); }
+      .compact-layout .goal-summary { margin-top: 13px; font-size: 14px; }
+      .compact-layout .goal-focus { gap: 8px; margin-top: 14px; }
+      .compact-layout .goal-focus li { font-size: 8px; }
+      .compact-layout .goal-focus li + li::before { margin-right: 8px; }
+      .compact-layout .goal-source { margin-top: 16px; font-size: 8px; }
+      .compact-layout .rail { left: 16px; gap: 11px; }
+      .compact-layout .rail button::after { display: none; }
+      .compact-layout .scene-readout { right: 20px; bottom: 16px; max-width: 150px; font-size: 6px; }
+      .compact-layout .scroll-note { bottom: 16px; left: 20px; font-size: 6px; }
+      .compact-layout .ghost-index { right: 22px; bottom: 11vh; }
+      .compact-layout .chapter:nth-child(even) .ghost-index { right: 22px; left: auto; }
+
+      .rail { position: fixed; z-index: 5; top: 50%; left: 34px; display: grid; gap: 13px; transform: translateY(-50%); }
+      .rail button { position: relative; width: 9px; height: 9px; padding: 0; border: 1px solid rgba(223, 209, 255, 0.7); border-radius: 50%; background: rgba(255, 255, 255, 0.08); cursor: pointer; transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+      .rail button::after { position: absolute; top: 50%; left: 18px; color: #f6eaff; content: attr(data-label); font-family: var(--mono); font-size: 8px; letter-spacing: 0.08em; opacity: 0; text-transform: uppercase; transform: translateY(-50%) translateX(-4px); transition: opacity 160ms ease, transform 160ms ease; white-space: nowrap; }
+      .rail button:hover::after, .rail button[aria-current="step"]::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+      .rail button[aria-current="step"] { border-color: var(--lime); background: var(--lime); box-shadow: 0 0 16px rgba(212, 255, 50, 0.75); transform: scale(1.25); }
+      .scroll-note { position: fixed; z-index: 4; bottom: 30px; left: 44px; color: #e5d6f1; font-family: var(--mono); font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; }
+      .scroll-note b { color: var(--lime); font-weight: 500; }
+      .scene-readout { position: fixed; z-index: 4; right: 44px; bottom: 29px; max-width: 250px; color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: 0.06em; line-height: 1.5; text-align: right; text-transform: uppercase; }
+      .scene-readout strong { display: block; margin-bottom: 4px; color: var(--pink); font-size: 9px; font-weight: 500; }
+      .image-credits { position: relative; z-index: 3; display: flex; justify-content: center; flex-wrap: wrap; gap: 5px 10px; padding: 18px 24px 48px; background: #080710; color: #b9abc9; font-family: var(--mono); font-size: 8px; line-height: 1.6; text-align: center; }
+      .image-credits a { color: #e8d7ff; text-decoration-color: rgba(232, 215, 255, 0.38); text-underline-offset: 3px; }
+      .image-credits a:hover { color: var(--blue); }
+
+      @media (max-width: 760px) {
+        .topbar { height: 60px; padding: 0 18px; }
+        .top-meta { display: none; }
+        .progress { top: 60px; }
+        .photo-grade { background: linear-gradient(180deg, rgba(8, 7, 16, 0.1), rgba(8, 7, 16, 0.04) 36%, rgba(8, 7, 16, 0.45) 72%, rgba(8, 7, 16, 0.76)); }
+        .veil { background: linear-gradient(180deg, rgba(8, 7, 16, 0.04), rgba(8, 7, 16, 0.04) 38%, rgba(8, 7, 16, 0.16) 66%, rgba(8, 7, 16, 0.38) 100%); }
+        .chapter, .chapter:first-child, .chapter:not(:first-child) { min-height: 100svh; align-items: flex-end; padding: 0 24px 17vh; }
+        .chapter:nth-child(odd), .chapter:nth-child(even) { justify-content: flex-start; }
+        .chapter-copy { width: min(460px, 100%); }
+        h1 { max-width: 400px; font-size: clamp(62px, 16vw, 88px); }
+        .hero-mark { margin-top: 20px; }
+        .empty-field { display: none; }
+        .goal-chapter[data-side="right"] { justify-content: flex-start; }
+        .sdg-card { width: min(460px, 100%); padding: 0; }
+        .goal-kicker { margin-bottom: 10px; }
+        .goal-number { width: 25px; height: 25px; }
+        .goal-title { font-size: clamp(32px, 9vw, 44px); }
+        .goal-summary { margin-top: 13px; font-size: 14px; }
+        .goal-focus { gap: 8px; margin-top: 14px; }
+        .goal-focus li { font-size: 8px; }
+        .goal-focus li + li::before { margin-right: 8px; }
+        .goal-source { margin-top: 16px; font-size: 8px; }
+        .ghost-index { right: 22px; bottom: 11vh; }
+        .chapter:nth-child(even) .ghost-index { left: auto; right: 22px; }
+        .rail { left: 16px; gap: 11px; }
+        .rail button::after { display: none; }
+        .scroll-note { bottom: 16px; left: 20px; font-size: 6px; }
+        .scene-readout { right: 20px; bottom: 16px; font-size: 6px; }
+        .image-credits { padding: 16px 20px 36px; font-size: 7px; }
+      }
+      @media (max-width: 420px) {
+        .brand-name { font-size: 9px; }
+        .brand-name small { font-size: 6px; }
+        .chapter, .chapter:first-child, .chapter:not(:first-child) { padding-right: 20px; padding-left: 20px; }
+        h1 { font-size: clamp(58px, 16vw, 72px); }
+        .rail { left: 11px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; scroll-snap-type: none; }
+        *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+        .goal-chapter.is-hovered .goal-bubbles span { animation: none; opacity: 0.45; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="photo-world" aria-hidden="true">
+      <img class="photo-layer" alt="" fetchpriority="high" />
+      <img class="photo-layer" alt="" />
+      <div class="photo-grade"></div>
+    </div>
+    <canvas id="earth-scene" aria-label="A neon green and blue Earth rotating as the page scrolls"></canvas>
+    <div class="veil" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Earth Index, back to top">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">EARTH INDEX<small>FIELD / 01</small></span>
+      </a>
+      <div class="top-meta"><span class="live-dot"></span><span id="top-index">17 Goals / Overview</span></div>
+      <button class="menu-button" type="button" aria-label="Return to the first section" title="Return to the first section">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </button>
+    </header>
+    <div class="progress" aria-hidden="true"><span id="progress-fill"></span></div>
+
+    <main class="journey" id="top">
+      <section class="chapter" data-index="0" data-label="01" aria-labelledby="intro-title">
+        <div class="chapter-copy">
+          <p class="chapter-tag">A living system · 01</p>
+          <h1 id="intro-title">EARTH<br /><span>IN MOTION</span></h1>
+          <span class="hero-mark">Scroll to move the world</span>
+        </div>
+        <span class="ghost-index" aria-hidden="true">17 GOALS</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="1" data-label="GOAL 01" aria-labelledby="goal-01-title" style="--goal-color:#e5243b">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">01</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-01-title">No Poverty</h2>
+          <p class="goal-summary">End poverty in every form by expanding access to essential services, social protection, resources, and resilience for people facing economic or environmental shocks.</p>
+          <ul class="goal-focus"><li>Basic services</li><li>Social protection</li><li>Resilience</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal1" target="_blank" rel="noopener noreferrer">Explore Goal 01 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 01 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="2" data-label="GOAL 02" aria-labelledby="goal-02-title" style="--goal-color:#dda63a">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">02</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-02-title">Zero Hunger</h2>
+          <p class="goal-summary">End hunger, strengthen food security and nutrition, and support agriculture that can sustain livelihoods while protecting the land and resources it depends on.</p>
+          <ul class="goal-focus"><li>Food security</li><li>Better nutrition</li><li>Sustainable agriculture</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal2" target="_blank" rel="noopener noreferrer">Explore Goal 02 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 02 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="3" data-label="GOAL 03" aria-labelledby="goal-03-title" style="--goal-color:#4c9f38">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">03</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-03-title">Good Health and Well-Being</h2>
+          <p class="goal-summary">Promote health at every age through safer births, disease prevention, mental well-being, and access to quality, affordable health services.</p>
+          <ul class="goal-focus"><li>Health services</li><li>Disease prevention</li><li>Well-being</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal3" target="_blank" rel="noopener noreferrer">Explore Goal 03 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 03 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="4" data-label="GOAL 04" aria-labelledby="goal-04-title" style="--goal-color:#c5192d">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">04</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-04-title">Quality Education</h2>
+          <p class="goal-summary">Ensure inclusive, equitable education and make lifelong learning possible, with access to safe schools and the skills people need for the future.</p>
+          <ul class="goal-focus"><li>Equal access</li><li>Learning outcomes</li><li>Lifelong learning</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal4" target="_blank" rel="noopener noreferrer">Explore Goal 04 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 04 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="5" data-label="GOAL 05" aria-labelledby="goal-05-title" style="--goal-color:#ff3a21">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">05</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-05-title">Gender Equality</h2>
+          <p class="goal-summary">End discrimination and violence against women and girls, and support equal participation, leadership, rights, and opportunity.</p>
+          <ul class="goal-focus"><li>Equal rights</li><li>End violence</li><li>Leadership</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal5" target="_blank" rel="noopener noreferrer">Explore Goal 05 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 05 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="6" data-label="GOAL 06" aria-labelledby="goal-06-title" style="--goal-color:#26bde2">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">06</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-06-title">Clean Water and Sanitation</h2>
+          <p class="goal-summary">Provide safe water and sanitation for all, improve water quality, and manage water resources sustainably.</p>
+          <ul class="goal-focus"><li>Safe water</li><li>Sanitation</li><li>Water management</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal6" target="_blank" rel="noopener noreferrer">Explore Goal 06 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 06 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="7" data-label="GOAL 07" aria-labelledby="goal-07-title" style="--goal-color:#fcc30b">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">07</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-07-title">Affordable and Clean Energy</h2>
+          <p class="goal-summary">Expand access to affordable, reliable, sustainable modern energy while increasing renewable energy and improving efficiency.</p>
+          <ul class="goal-focus"><li>Reliable access</li><li>Renewables</li><li>Efficiency</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal7" target="_blank" rel="noopener noreferrer">Explore Goal 07 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 07 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="8" data-label="GOAL 08" aria-labelledby="goal-08-title" style="--goal-color:#a21942">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">08</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-08-title">Decent Work and Economic Growth</h2>
+          <p class="goal-summary">Promote inclusive, sustainable economic growth, productive employment, decent work, and safe working conditions for all.</p>
+          <ul class="goal-focus"><li>Decent work</li><li>Workers' rights</li><li>Sustainable growth</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal8" target="_blank" rel="noopener noreferrer">Explore Goal 08 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 08 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="9" data-label="GOAL 09" aria-labelledby="goal-09-title" style="--goal-color:#fd6925">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">09</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-09-title">Industry, Innovation and Infrastructure</h2>
+          <p class="goal-summary">Build resilient infrastructure, support inclusive and sustainable industry, and strengthen research and innovation.</p>
+          <ul class="goal-focus"><li>Resilient infrastructure</li><li>Industry</li><li>Innovation</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal9" target="_blank" rel="noopener noreferrer">Explore Goal 09 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 09 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="10" data-label="GOAL 10" data-side="right" aria-labelledby="goal-10-title" style="--goal-color:#dd1367">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">10</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-10-title">Reduced Inequalities</h2>
+          <p class="goal-summary">Reduce inequalities within and between countries by widening opportunity, supporting social inclusion, and promoting fair representation.</p>
+          <ul class="goal-focus"><li>Equal opportunity</li><li>Social inclusion</li><li>Fair representation</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal10" target="_blank" rel="noopener noreferrer">Explore Goal 10 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 10 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="11" data-label="GOAL 11" data-side="right" aria-labelledby="goal-11-title" style="--goal-color:#fd9d24">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">11</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-11-title">Sustainable Cities and Communities</h2>
+          <p class="goal-summary">Make cities inclusive, safe, resilient, and sustainable, with access to housing, transport, public space, and disaster planning.</p>
+          <ul class="goal-focus"><li>Housing</li><li>Public transport</li><li>Resilience</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal11" target="_blank" rel="noopener noreferrer">Explore Goal 11 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 11 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="12" data-label="GOAL 12" data-side="right" aria-labelledby="goal-12-title" style="--goal-color:#bf8b2e">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">12</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-12-title">Responsible Consumption and Production</h2>
+          <p class="goal-summary">Use natural resources efficiently and reduce waste and pollution across production, consumption, and supply chains.</p>
+          <ul class="goal-focus"><li>Resource efficiency</li><li>Waste reduction</li><li>Sustainable business</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal12" target="_blank" rel="noopener noreferrer">Explore Goal 12 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 12 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="13" data-label="GOAL 13" data-side="right" aria-labelledby="goal-13-title" style="--goal-color:#3f7e44">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">13</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-13-title">Climate Action</h2>
+          <p class="goal-summary">Take urgent action on climate change through stronger resilience, adaptation, education, and coordinated national planning.</p>
+          <ul class="goal-focus"><li>Mitigation</li><li>Adaptation</li><li>Climate resilience</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal13" target="_blank" rel="noopener noreferrer">Explore Goal 13 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 13 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="14" data-label="GOAL 14" data-side="right" aria-labelledby="goal-14-title" style="--goal-color:#0a97d9">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">14</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-14-title">Life Below Water</h2>
+          <p class="goal-summary">Conserve oceans and marine resources by reducing pollution, protecting ecosystems, and supporting sustainable fisheries.</p>
+          <ul class="goal-focus"><li>Marine ecosystems</li><li>Ocean pollution</li><li>Sustainable fisheries</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal14" target="_blank" rel="noopener noreferrer">Explore Goal 14 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 14 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="15" data-label="GOAL 15" data-side="right" aria-labelledby="goal-15-title" style="--goal-color:#56c02b">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">15</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-15-title">Life on Land</h2>
+          <p class="goal-summary">Protect and restore terrestrial ecosystems, manage forests sustainably, combat desertification, and halt biodiversity loss.</p>
+          <ul class="goal-focus"><li>Ecosystem restoration</li><li>Forests</li><li>Biodiversity</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal15" target="_blank" rel="noopener noreferrer">Explore Goal 15 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 15 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="16" data-label="GOAL 16" data-side="right" aria-labelledby="goal-16-title" style="--goal-color:#00689d">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">16</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-16-title">Peace, Justice and Strong Institutions</h2>
+          <p class="goal-summary">Promote peaceful, inclusive societies, ensure access to justice, and build effective, accountable institutions.</p>
+          <ul class="goal-focus"><li>Peace</li><li>Justice</li><li>Accountable institutions</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal16" target="_blank" rel="noopener noreferrer">Explore Goal 16 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 16 / 17</span>
+      </section>
+      <section class="chapter goal-chapter" data-index="17" data-label="GOAL 17" data-side="right" aria-labelledby="goal-17-title" style="--goal-color:#19486a">
+        <article class="sdg-card">
+          <p class="goal-kicker"><span class="goal-number">17</span> Sustainable Development Goal</p>
+          <h2 class="goal-title" id="goal-17-title">Partnerships for the Goals</h2>
+          <p class="goal-summary">Strengthen the partnerships, financing, technology, trade, and cooperation needed to achieve sustainable development worldwide.</p>
+          <ul class="goal-focus"><li>Global partnerships</li><li>Finance</li><li>Technology</li></ul>
+          <a class="goal-source" href="https://sdgs.un.org/goals/goal17" target="_blank" rel="noopener noreferrer">Explore Goal 17 on the UN site</a>
+        </article>
+        <span class="ghost-index" aria-hidden="true">GOAL 17 / 17</span>
+      </section>
+    </main>
+
+   <footer class="image-credits"> <span> </span><div id="photo-credits"></div></footer>
+    <nav class="rail" aria-label="Page sections">
+      <button type="button" data-go="0" data-label="Start" aria-label="Go to the overview" aria-current="step"></button>
+      <button type="button" data-go="1" data-label="01" aria-label="Go to Goal 01"></button>
+      <button type="button" data-go="2" data-label="02" aria-label="Go to Goal 02"></button>
+      <button type="button" data-go="3" data-label="03" aria-label="Go to Goal 03"></button>
+      <button type="button" data-go="4" data-label="04" aria-label="Go to Goal 04"></button>
+      <button type="button" data-go="5" data-label="05" aria-label="Go to Goal 05"></button>
+      <button type="button" data-go="6" data-label="06" aria-label="Go to Goal 06"></button>
+      <button type="button" data-go="7" data-label="07" aria-label="Go to Goal 07"></button>
+      <button type="button" data-go="8" data-label="08" aria-label="Go to Goal 08"></button>
+      <button type="button" data-go="9" data-label="09" aria-label="Go to Goal 09"></button>
+      <button type="button" data-go="10" data-label="10" aria-label="Go to Goal 10"></button>
+      <button type="button" data-go="11" data-label="11" aria-label="Go to Goal 11"></button>
+      <button type="button" data-go="12" data-label="12" aria-label="Go to Goal 12"></button>
+      <button type="button" data-go="13" data-label="13" aria-label="Go to Goal 13"></button>
+      <button type="button" data-go="14" data-label="14" aria-label="Go to Goal 14"></button>
+      <button type="button" data-go="15" data-label="15" aria-label="Go to Goal 15"></button>
+      <button type="button" data-go="16" data-label="16" aria-label="Go to Goal 16"></button>
+      <button type="button" data-go="17" data-label="17" aria-label="Go to Goal 17"></button>
+    </nav>
+    <div class="scroll-note"><b>Scroll</b> to rotate</div>
+    <div class="scene-readout"><strong id="scene-name">The 17 Goals</strong><span id="scene-state">Scroll to explore</span></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      const canvas = document.querySelector("#earth-scene");
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0, 8.8);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+
+      scene.add(new THREE.HemisphereLight(0xd9fbff, 0x584477, 1.55));
+      const sun = new THREE.DirectionalLight(0xf0ffb9, 2.8);
+      sun.position.set(-4, 3, 6);
+      scene.add(sun);
+      const rim = new THREE.DirectionalLight(0x4dd8ff, 2.4);
+      rim.position.set(4, -2, -4);
+      scene.add(rim);
+      const pinkFill = new THREE.DirectionalLight(0xff9cda, 0.85);
+      pinkFill.position.set(-4, -3, 5);
+      scene.add(pinkFill);
+
+      const neutralWash = new THREE.Color(0x080710);
+      const washMaterial = new THREE.MeshBasicMaterial({ color: neutralWash, transparent: true, opacity: 0.06, depthWrite: false });
+      const washPlane = new THREE.Mesh(new THREE.PlaneGeometry(80, 50), washMaterial);
+      washPlane.position.z = -16;
+      scene.add(washPlane);
+
+      function makeArtworkTexture(paint) {
+        const artwork = document.createElement("canvas");
+        artwork.width = 1280;
+        artwork.height = 800;
+        paint(artwork.getContext("2d"), artwork.width, artwork.height);
+        const texture = new THREE.CanvasTexture(artwork);
+        texture.encoding = THREE.sRGBEncoding;
+        texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 4);
+        return texture;
+      }
+
+      function paintPolygon(context, points) {
+        context.beginPath();
+        points.forEach(([x, y], index) => index ? context.lineTo(x, y) : context.moveTo(x, y));
+        context.closePath();
+        context.fill();
+      }
+
+      const mountainTexture = makeArtworkTexture((context, width, height) => {
+        const sky = context.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, "#090719");
+        sky.addColorStop(0.38, "#311177");
+        sky.addColorStop(0.7, "#bd247f");
+        sky.addColorStop(1, "#ff6a28");
+        context.fillStyle = sky;
+        context.fillRect(0, 0, width, height);
+
+        const aurora = context.createLinearGradient(0, 120, width, 490);
+        aurora.addColorStop(0, "#173ee9");
+        aurora.addColorStop(0.38, "#8e22db");
+        aurora.addColorStop(0.67, "#ff35bb");
+        aurora.addColorStop(1, "#2bdcff");
+        context.fillStyle = aurora;
+        context.beginPath();
+        context.moveTo(0, 365);
+        context.bezierCurveTo(130, 240, 235, 270, 330, 220);
+        context.bezierCurveTo(450, 140, 565, 260, 660, 165);
+        context.bezierCurveTo(790, 55, 900, 245, 1000, 150);
+        context.bezierCurveTo(1100, 90, 1190, 205, width, 155);
+        context.lineTo(width, 560);
+        context.lineTo(0, 560);
+        context.closePath();
+        context.fill();
+        for (let line = 0; line < 18; line++) {
+          context.beginPath();
+          context.moveTo(0, 245 + line * 9);
+          context.bezierCurveTo(350, 140 + line * 12, 760, 330 - line * 5, width, 205 + line * 11);
+          context.strokeStyle = `rgba(255,220,255,${0.035 + (line % 4) * 0.012})`;
+          context.lineWidth = 2;
+          context.stroke();
+        }
+
+        context.fillStyle = "#161344";
+        paintPolygon(context, [[0,570],[180,390],[305,500],[510,220],[700,500],[860,335],[1035,510],[1160,395],[1280,500],[1280,800],[0,800]]);
+        const ridgeLight = context.createLinearGradient(0, 260, 0, 800);
+        ridgeLight.addColorStop(0, "#6c27db");
+        ridgeLight.addColorStop(0.55, "#152d92");
+        ridgeLight.addColorStop(1, "#090b29");
+        context.fillStyle = ridgeLight;
+        paintPolygon(context, [[0,690],[220,490],[340,575],[635,250],[815,548],[1015,408],[1280,665],[1280,800],[0,800]]);
+        context.strokeStyle = "rgba(71,220,255,0.88)";
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(635, 250);
+        context.lineTo(602, 381);
+        context.lineTo(662, 425);
+        context.lineTo(631, 502);
+        context.lineTo(710, 551);
+        context.stroke();
+        context.strokeStyle = "rgba(255,88,225,0.86)";
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(635, 250);
+        context.lineTo(696, 370);
+        context.lineTo(665, 432);
+        context.lineTo(757, 486);
+        context.stroke();
+        for (let star = 0; star < 95; star++) {
+          const x = (star * 193) % width;
+          const y = (star * 79) % 360;
+          context.fillStyle = star % 3 ? "rgba(236,225,255,0.58)" : "rgba(42,225,255,0.9)";
+          context.fillRect(x, y, star % 5 === 0 ? 3 : 2, star % 5 === 0 ? 3 : 2);
+        }
+      });
+
+      const maneTexture = makeArtworkTexture((context, width, height) => {
+        context.fillStyle = "#07070d";
+        context.fillRect(0, 0, width, height);
+        const streaks = ["#ff2c9c", "#fa6b16", "#efdb27", "#13d8d1", "#2865ff", "#b72cff"];
+        for (let strand = 0; strand < 150; strand++) {
+          const y = (strand * 37) % height;
+          const startX = -180 + (strand % 9) * 42;
+          context.beginPath();
+          context.moveTo(startX, y);
+          context.bezierCurveTo(180, y - 130, 410, 650 - y * 0.25, 725, 400 + Math.sin(strand) * 210);
+          context.strokeStyle = streaks[strand % streaks.length];
+          context.globalAlpha = 0.2 + (strand % 5) * 0.07;
+          context.lineWidth = 2 + strand % 10;
+          context.stroke();
+        }
+        context.globalAlpha = 1;
+
+        context.beginPath();
+        for (let point = 0; point <= 160; point++) {
+          const angle = point / 160 * Math.PI * 2;
+          const radius = 300 + Math.sin(angle * 13) * 29 + Math.sin(angle * 7) * 18;
+          const x = 600 + Math.cos(angle) * radius * 0.78;
+          const y = 405 + Math.sin(angle) * radius * 0.94;
+          point ? context.lineTo(x, y) : context.moveTo(x, y);
+        }
+        context.closePath();
+        const mane = context.createRadialGradient(610, 400, 25, 590, 410, 340);
+        mane.addColorStop(0, "#ff9a18");
+        mane.addColorStop(0.3, "#ff2aa5");
+        mane.addColorStop(0.62, "#5732ff");
+        mane.addColorStop(0.82, "#00c9f2");
+        mane.addColorStop(1, "#111126");
+        context.fillStyle = mane;
+        context.fill();
+        for (let strand = 0; strand < 130; strand++) {
+          const angle = strand * 2.399;
+          const startRadius = 80 + strand % 6 * 18;
+          const endRadius = 260 + strand % 5 * 20;
+          context.beginPath();
+          context.moveTo(600 + Math.cos(angle) * startRadius, 410 + Math.sin(angle) * startRadius);
+          context.quadraticCurveTo(600 + Math.cos(angle + 0.5) * 290, 410 + Math.sin(angle + 0.5) * 300, 600 + Math.cos(angle) * endRadius, 410 + Math.sin(angle) * endRadius);
+          context.strokeStyle = streaks[strand % streaks.length];
+          context.globalAlpha = 0.5;
+          context.lineWidth = 2 + strand % 5;
+          context.stroke();
+        }
+        context.globalAlpha = 1;
+
+        context.beginPath();
+        context.moveTo(515, 194);
+        context.bezierCurveTo(610, 151, 740, 188, 800, 275);
+        context.bezierCurveTo(855, 293, 902, 337, 921, 389);
+        context.lineTo(1008, 426);
+        context.lineTo(948, 464);
+        context.bezierCurveTo(934, 493, 902, 504, 877, 491);
+        context.bezierCurveTo(862, 553, 816, 598, 754, 602);
+        context.bezierCurveTo(653, 617, 566, 531, 535, 436);
+        context.closePath();
+        const face = context.createLinearGradient(520, 240, 930, 550);
+        face.addColorStop(0, "#ff6930");
+        face.addColorStop(0.32, "#f52aa1");
+        face.addColorStop(0.7, "#562bd0");
+        face.addColorStop(1, "#09285c");
+        context.fillStyle = face;
+        context.fill();
+        context.strokeStyle = "rgba(255,222,249,0.78)";
+        context.lineWidth = 4;
+        context.stroke();
+        context.beginPath();
+        context.ellipse(790, 338, 38, 17, -0.18, 0, Math.PI * 2);
+        context.fillStyle = "#160f31";
+        context.fill();
+        context.beginPath();
+        context.arc(802, 338, 8, 0, Math.PI * 2);
+        context.fillStyle = "#fff04d";
+        context.fill();
+        context.fillStyle = "#150d22";
+        paintPolygon(context, [[963,416],[1008,426],[956,454]]);
+        context.strokeStyle = "rgba(255,195,244,0.7)";
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(843, 522);
+        context.quadraticCurveTo(888, 535, 919, 506);
+        context.stroke();
+      });
+
+      const eyeTexture = makeArtworkTexture((context, width, height) => {
+        context.fillStyle = "#06060b";
+        context.fillRect(0, 0, width, height);
+        const colors = ["#ff2b8f", "#ff7a1a", "#ffe536", "#00d9d0", "#1f70ff", "#a32bff"];
+        for (let stroke = 0; stroke < 180; stroke++) {
+          const y = 400 + Math.sin(stroke * 0.44) * (110 + stroke % 90);
+          context.beginPath();
+          context.moveTo(-80, y + (stroke % 5) * 14);
+          context.bezierCurveTo(300, y - 180, 850, y + 170, width + 80, y - 40);
+          context.strokeStyle = colors[stroke % colors.length];
+          context.globalAlpha = 0.16 + (stroke % 4) * 0.08;
+          context.lineWidth = 2 + stroke % 12;
+          context.stroke();
+        }
+        context.globalAlpha = 1;
+
+        context.beginPath();
+        context.moveTo(140, 410);
+        context.bezierCurveTo(360, 168, 850, 177, 1120, 410);
+        context.bezierCurveTo(850, 636, 360, 642, 140, 410);
+        context.closePath();
+        const sclera = context.createLinearGradient(0, 230, 0, 590);
+        sclera.addColorStop(0, "#ff99db");
+        sclera.addColorStop(0.48, "#fff0f6");
+        sclera.addColorStop(1, "#46c9ed");
+        context.fillStyle = sclera;
+        context.fill();
+        context.strokeStyle = "#ff55c9";
+        context.lineWidth = 15;
+        context.stroke();
+
+        context.save();
+        context.beginPath();
+        context.moveTo(140, 410);
+        context.bezierCurveTo(360, 168, 850, 177, 1120, 410);
+        context.bezierCurveTo(850, 636, 360, 642, 140, 410);
+        context.closePath();
+        context.clip();
+        const iris = context.createRadialGradient(640, 410, 55, 640, 410, 232);
+        iris.addColorStop(0, "#070713");
+        iris.addColorStop(0.29, "#111241");
+        iris.addColorStop(0.42, "#fb3bb8");
+        iris.addColorStop(0.58, "#27d9ff");
+        iris.addColorStop(0.77, "#ff8821");
+        iris.addColorStop(1, "#6225d4");
+        context.beginPath();
+        context.arc(640, 410, 235, 0, Math.PI * 2);
+        context.fillStyle = iris;
+        context.fill();
+        for (let ray = 0; ray < 76; ray++) {
+          const angle = ray / 76 * Math.PI * 2;
+          context.beginPath();
+          context.moveTo(640 + Math.cos(angle) * 102, 410 + Math.sin(angle) * 102);
+          context.lineTo(640 + Math.cos(angle) * (188 + ray % 4 * 8), 410 + Math.sin(angle) * (188 + ray % 4 * 8));
+          context.strokeStyle = colors[ray % colors.length];
+          context.globalAlpha = 0.76;
+          context.lineWidth = 3 + ray % 4;
+          context.stroke();
+        }
+        context.globalAlpha = 1;
+        context.beginPath();
+        context.arc(640, 410, 91, 0, Math.PI * 2);
+        context.fillStyle = "#05050c";
+        context.fill();
+        context.beginPath();
+        context.arc(605, 370, 22, 0, Math.PI * 2);
+        context.fillStyle = "rgba(255,255,255,0.94)";
+        context.fill();
+        context.restore();
+
+        context.strokeStyle = "#170d2e";
+        context.lineWidth = 19;
+        context.beginPath();
+        context.moveTo(150, 410);
+        context.bezierCurveTo(380, 164, 860, 165, 1120, 410);
+        context.stroke();
+        for (let lash = 0; lash < 15; lash++) {
+          const x = 205 + lash * 61;
+          const y = 350 - Math.sin(lash / 14 * Math.PI) * 112;
+          context.beginPath();
+          context.moveTo(x, y);
+          context.lineTo(x - 24 + lash % 3 * 12, y - 62 - lash % 4 * 8);
+          context.strokeStyle = lash % 2 ? "#ff35be" : "#35dfff";
+          context.lineWidth = 5;
+          context.stroke();
+        }
+      });
+
+      const artGeometry = new THREE.PlaneGeometry(18, 11.25);
+      const artScenes = [mountainTexture, maneTexture, eyeTexture].map((texture, index) => {
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+        const imagePlane = new THREE.Mesh(artGeometry, material);
+        imagePlane.position.set(0, 0, -3.2 - index * 0.025);
+        scene.add(imagePlane);
+        return { imagePlane, material };
+      });
+      const goalArtLayers = [0, 1].map((index) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1024;
+        canvas.height = 640;
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.encoding = THREE.sRGBEncoding;
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+        const imagePlane = new THREE.Mesh(artGeometry, material);
+        imagePlane.position.set(0, 0, -2.85 - index * 0.015);
+        scene.add(imagePlane);
+        return { canvas, context: canvas.getContext("2d"), texture, material, imagePlane };
+      });
+      const photoLayers = [...document.querySelectorAll(".photo-layer")];
+      const photoSources = [
+        { url: "https://images.unsplash.com/photo-1638526970908-b18e32b0bc42?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fHBvdmVydHl8ZW58MHx8MHx8fDA%3D", page: "https://images.unsplash.com/photo-1638526970908-b18e32b0bc42?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fHBvdmVydHl8ZW58MHx8MHx8fDA%3D", credit: "Unsplash" },
+        { url: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHN8ZW58MHx8MHx8fDA%3D", page: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Y3JvcHN8ZW58MHx8MHx8fDA%3D", credit: "Unsplash" },
+        { url: "https://plus.unsplash.com/premium_photo-1699387204388-120141c76d51?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8aGVhbHRoY2FyZXxlbnwwfHwwfHx8MA%3D%3D", page: "https://plus.unsplash.com/premium_photo-1699387204388-120141c76d51?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8aGVhbHRoY2FyZXxlbnwwfHwwfHx8MA%3D%3D", credit: "Unsplash" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/In_Zaporizhzhia%2C_the_President_Visited_an_Underground_School_and_Spoke_with_Children_on_December_12%2C_2024_-_17.jpg/1920px-In_Zaporizhzhia%2C_the_President_Visited_an_Underground_School_and_Spoke_with_Children_on_December_12%2C_2024_-_17.jpg", page: "https://commons.wikimedia.org/wiki/File:In_Zaporizhzhia,_the_President_Visited_an_Underground_School_and_Spoke_with_Children_on_December_12,_2024_-_17.jpg", credit: "President of Ukraine · CC0" },
+        { url: "https://images.unsplash.com/photo-1556484687-30636164638b?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8ZXF1YWxpdHl8ZW58MHx8MHx8fDA%3D", page: "https://images.unsplash.com/photo-1556484687-30636164638b?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8ZXF1YWxpdHl8ZW58MHx8MHx8fDA%3D", credit: "Unsplash" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Beech_Forest_%28AU%29%2C_Great_Otway_National_Park%2C_Beauchamp_Falls_--_2019_--_1271.jpg/1920px-Beech_Forest_%28AU%29%2C_Great_Otway_National_Park%2C_Beauchamp_Falls_--_2019_--_1271.jpg", page: "https://commons.wikimedia.org/wiki/File:Beech_Forest_(AU),_Great_Otway_National_Park,_Beauchamp_Falls_--_2019_--_1271.jpg", credit: "Dietmar Rabich · CC BY-SA 4.0" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Biogas_Photovoltaik_Wind.jpg/1920px-Biogas_Photovoltaik_Wind.jpg", page: "https://commons.wikimedia.org/wiki/File:Biogas_Photovoltaik_Wind.jpg", credit: "Florian Gerlach · CC BY-SA 3.0" },
+        { url: "https://upload.wikimedia.org/wikipedia/commons/b/b0/Construction_Photography_of_Workers_on_Site_by_Construction_Photographer_Daniel_Mekis.jpg", page: "https://commons.wikimedia.org/wiki/File:Construction_Photography_of_Workers_on_Site_by_Construction_Photographer_Daniel_Mekis.jpg", credit: "Daniel Mekis · CC BY 4.0" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Huta_Pok%C3%B3j_walcownia_2019_%284%29.jpg/1920px-Huta_Pok%C3%B3j_walcownia_2019_%284%29.jpg", page: "https://commons.wikimedia.org/wiki/File:Huta_Pok%C3%B3j_walcownia_2019_(4).jpg", credit: "Adrian Tync · CC BY-SA 4.0" },
+        { url: "https://plus.unsplash.com/premium_photo-1661901655138-bacf43300134?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", page: "https://plus.unsplash.com/premium_photo-1661901655138-bacf43300134?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", credit: "Unsplash" },
+        { url: "https://images.unsplash.com/photo-1645156568844-13cc8b4b1cf7?q=80&w=1360&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", page: "https://images.unsplash.com/photo-1645156568844-13cc8b4b1cf7?q=80&w=1360&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", credit: "Unsplash" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/Singapore_Recycling-bins-01.jpg/1920px-Singapore_Recycling-bins-01.jpg", page: "https://commons.wikimedia.org/wiki/File:Singapore_Recycling-bins-01.jpg", credit: "CEphoto, Uwe Aranas · CC BY-SA 3.0" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Fires_and_smoke_in_Washington%2C_Oregon%2C_Idaho%2C_and_California_%28MODIS_2015-08-25%29.jpg/1920px-Fires_and_smoke_in_Washington%2C_Oregon%2C_Idaho%2C_and_California_%28MODIS_2015-08-25%29.jpg", page: "https://commons.wikimedia.org/wiki/File:Fires_and_smoke_in_Washington,_Oregon,_Idaho,_and_California_(MODIS_2015-08-25).jpg", credit: "Jeff Schmaltz, NASA GSFC · Public domain" },
+        { url: "https://plus.unsplash.com/premium_photo-1661818068162-6f077d492187?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", page: "https://plus.unsplash.com/premium_photo-1661818068162-6f077d492187?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", credit: "Unsplash" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Zagedan_Lakes%2C_Mountain_cirque%2C_Caucasus_Mountains.jpg/1920px-Zagedan_Lakes%2C_Mountain_cirque%2C_Caucasus_Mountains.jpg", page: "https://commons.wikimedia.org/wiki/File:Zagedan_Lakes,_Mountain_cirque,_Caucasus_Mountains.jpg", credit: "Vyacheslav Argenberg · CC BY 4.0" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Close-up_of_Lady_Justice_statue_holding_scales%2C_symbolizing_justice_and_fairness.jpg/1920px-Close-up_of_Lady_Justice_statue_holding_scales%2C_symbolizing_justice_and_fairness.jpg", page: "https://commons.wikimedia.org/wiki/File:Close-up_of_Lady_Justice_statue_holding_scales,_symbolizing_justice_and_fairness.jpg", credit: "DP Singh Bhullar · CC BY-SA 4.0" },
+        { url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/011_Plains_zebra_eye_close-up_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg/1920px-011_Plains_zebra_eye_close-up_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg", page: "https://commons.wikimedia.org/wiki/File:011_Plains_zebra_eye_close-up_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg", credit: "Giles Laurent · CC BY-SA 4.0" },
+      ];
+      const photoPositions = [
+        [[48, 42], [54, 49], [62, 45]],
+        [[56, 40], [48, 51], [67, 47]],
+        [[52, 48], [63, 44], [45, 53]],
+        [[61, 46], [42, 48], [57, 43]],
+        [[46, 44], [59, 50], [64, 48]],
+      ];
+
+      function drawGoalBackdrop(context, goalNumber) {
+        const width = context.canvas.width;
+        const height = context.canvas.height;
+        const chapter = document.querySelector(`.goal-chapter[data-index="${goalNumber}"]`);
+        const accent = new THREE.Color(getComputedStyle(chapter).getPropertyValue("--goal-color").trim()).getStyle();
+        const spectrum = [accent, "#ff35be", "#ff781e", "#d4ff32", "#22d7ff", "#563cff"];
+        const second = spectrum[(goalNumber + 1) % spectrum.length];
+        const third = spectrum[(goalNumber + 3) % spectrum.length];
+        context.clearRect(0, 0, width, height);
+        context.fillStyle = "rgba(7, 6, 15, 0.68)";
+        context.fillRect(0, 0, width, height);
+
+        context.globalCompositeOperation = "screen";
+        for (let stroke = 0; stroke < 35; stroke++) {
+          const startY = (stroke * 47 + goalNumber * 61) % (height + 120) - 60;
+          context.beginPath();
+          context.moveTo(-100, startY);
+          context.bezierCurveTo(width * 0.28, startY - 110 + goalNumber * 3, width * 0.68, startY + 120, width + 100, startY - 70);
+          context.strokeStyle = spectrum[(stroke + goalNumber) % spectrum.length];
+          context.globalAlpha = 0.13 + (stroke % 4) * 0.035;
+          context.lineWidth = 2 + (stroke % 7) * 2;
+          context.stroke();
+        }
+        context.globalAlpha = 1;
+        context.globalCompositeOperation = "source-over";
+        context.save();
+        context.translate(width * 0.65, height * 0.5);
+        context.scale(1.25, 1.25);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.shadowColor = accent;
+        context.shadowBlur = 18;
+        context.strokeStyle = accent;
+        context.fillStyle = "rgba(8, 7, 18, 0.34)";
+        context.lineWidth = 13;
+
+        const line = (points, color = accent, lineWidth = 13) => {
+          context.beginPath();
+          points.forEach(([x, y], index) => index ? context.lineTo(x, y) : context.moveTo(x, y));
+          context.strokeStyle = color;
+          context.lineWidth = lineWidth;
+          context.stroke();
+        };
+        const ring = (x, y, radius, color = second, lineWidth = 12) => {
+          context.beginPath();
+          context.arc(x, y, radius, 0, Math.PI * 2);
+          context.strokeStyle = color;
+          context.lineWidth = lineWidth;
+          context.stroke();
+        };
+
+        switch (goalNumber) {
+          case 1:
+            line([[-250,155],[-150,155],[-150,95],[-45,95],[-45,25],[65,25],[65,-70],[195,-70]], accent, 20);
+            ring(-205, -105, 35, second, 10);
+            ring(190, -110, 24, third, 9);
+            break;
+          case 2:
+            context.beginPath(); context.arc(0,-150,58,0,Math.PI*2); context.fillStyle=second; context.fill();
+            for (let row = 0; row < 5; row++) {
+              const x = -200 + row * 95;
+              line([[x,180],[x-14,25],[x+4,-35]], row % 2 ? third : accent, 9);
+              line([[x+1,65],[x-45,28]], second, 7);
+              line([[x+2,25],[x+42,-8]], third, 7);
+            }
+            break;
+          case 3:
+            context.beginPath(); context.moveTo(0,150); context.bezierCurveTo(-220,5,-125,-155,0,-40); context.bezierCurveTo(140,-175,235,10,0,150); context.strokeStyle=accent; context.lineWidth=15; context.stroke();
+            line([[-250,5],[-145,5],[-100,-40],[-55,80],[0,-115],[55,30],[125,30],[160,-8],[250,-8]], "#22d7ff", 9);
+            break;
+          case 4:
+            line([[-220,-145],[-45,-110],[0,-70],[45,-110],[220,-145],[220,140],[45,106],[0,145],[-45,106],[-220,140],[-220,-145]], accent, 12);
+            line([[-180,-70],[-70,-50]], second, 7); line([[-180,-15],[-65,5]], third, 7);
+            line([[70,-50],[180,-70]], third, 7); line([[70,5],[180,-15]], second, 7);
+            break;
+          case 5:
+            line([[0,-190],[0,130],[-160,130],[0,130],[160,130]], accent, 13);
+            line([[-190,-85],[190,-85]], second, 12); line([[0,-85],[-135,30]], third, 8); line([[0,-85],[135,30]], accent, 8);
+            context.beginPath(); context.moveTo(-195,30); context.quadraticCurveTo(-135,108,-75,30); context.closePath(); context.strokeStyle=second; context.lineWidth=9; context.stroke();
+            context.beginPath(); context.moveTo(75,30); context.quadraticCurveTo(135,108,195,30); context.closePath(); context.strokeStyle=third; context.lineWidth=9; context.stroke();
+            break;
+          case 6:
+            context.beginPath(); context.moveTo(0,-215); context.bezierCurveTo(-40,-130,-160,5,-160,85); context.arc(0,85,160,Math.PI,0); context.bezierCurveTo(160,5,40,-130,0,-215); context.strokeStyle=accent; context.lineWidth=13; context.stroke();
+            for (let wave = 0; wave < 3; wave++) line([[-230,145+wave*43],[-110,130+wave*43],[0,148+wave*43],[115,128+wave*43],[230,145+wave*43]], wave%2?third:second, 8);
+            break;
+          case 7:
+            line([[-35,-220],[-155,5],[-35,5],[-100,205],[150,-55],[40,-55],[105,-220],[-35,-220]], "#ffe432", 14);
+            for (let row=0; row<3; row++) for(let col=0; col<4; col++) context.strokeRect(-230+col*62,-170+row*48,48,32);
+            break;
+          case 8:
+            for(let bar=0;bar<5;bar++){context.fillStyle=spectrum[bar%spectrum.length];context.globalAlpha=.78;context.fillRect(-220+bar*85,125-bar*46,56,bar*46+35);}
+            context.globalAlpha=1; line([[-240,120],[-125,50],[-38,70],[65,-75],[220,-175]], third, 13);
+            line([[150,-174],[220,-175],[202,-105]], third, 13);
+            break;
+          case 9:
+            ring(0,0,125,accent,24); ring(0,0,60,second,12);
+            for(let tooth=0;tooth<12;tooth++){const angle=tooth*Math.PI/6;line([[Math.cos(angle)*142,Math.sin(angle)*142],[Math.cos(angle)*205,Math.sin(angle)*205]],tooth%2?third:accent,16);}
+            break;
+          case 10:
+            for(let level=0;level<5;level++){const x=-205+level*100;line([[x,150-level*45],[x,40-level*45],[x+52,40-level*45],[x+52,150-level*45]],spectrum[level%spectrum.length],10);}
+            line([[-230,190],[230,190]],second,8);
+            break;
+          case 11:
+            for(let tower=0;tower<6;tower++){const x=-245+tower*82;const top=-115+(tower%3)*40;context.strokeStyle=spectrum[tower%spectrum.length];context.lineWidth=9;context.strokeRect(x,top,60,260-top);for(let row=0;row<4;row++)context.fillRect(x+14,top+28+row*39,10,12);}
+            line([[-240,160],[240,160]],third,10);
+            break;
+          case 12:
+            context.beginPath(); context.arc(0,0,175,-2.6,-0.35); context.strokeStyle=accent; context.lineWidth=21; context.stroke();
+            context.beginPath(); context.arc(0,0,175,0.55,2.8); context.strokeStyle=second; context.lineWidth=21; context.stroke();
+            line([[151,-116],[211,-110],[186,-55]],accent,14); line([[-151,116],[-211,110],[-186,55]],second,14);
+            break;
+          case 13:
+            context.fillStyle="rgba(255,255,255,0.05)"; paintPolygon(context,[[-280,185],[-125,-5],[-25,100],[100,-205],[260,185]]); context.strokeStyle=accent;context.lineWidth=12;context.stroke();
+            line([[150,-205],[65,-30],[132,-30],[35,142]],"#ffe432",14);
+            break;
+          case 14:
+            for(let wave=0;wave<4;wave++) line([[-250,-80+wave*75],[-130,-115+wave*75],[0,-80+wave*75],[130,-115+wave*75],[250,-80+wave*75]],spectrum[wave%spectrum.length],10);
+            context.beginPath();context.ellipse(0,25,104,48,0,0,Math.PI*2);context.fillStyle=accent;context.fill();
+            context.beginPath();context.moveTo(90,25);context.lineTo(180,-45);context.lineTo(180,95);context.closePath();context.fillStyle=second;context.fill();
+            context.beginPath();context.arc(-32,8,7,0,Math.PI*2);context.fillStyle="#080710";context.fill();
+            break;
+          case 15:
+            line([[0,210],[0,-170]],third,18);
+            for(let branch=0;branch<6;branch++){const y=115-branch*48;const direction=branch%2?1:-1;line([[0,y],[direction*85,y-55],[direction*150,y-125]],branch%2?second:accent,11);}
+            context.beginPath();context.ellipse(-110,-65,72,34,-.7,0,Math.PI*2);context.strokeStyle=accent;context.lineWidth=11;context.stroke();
+            context.beginPath();context.ellipse(110,35,72,34,.7,0,Math.PI*2);context.strokeStyle=second;context.lineWidth=11;context.stroke();
+            break;
+          case 16:
+            line([[0,-210],[0,170],[-190,170],[0,170],[190,170]],accent,12); line([[-215,-100],[215,-100]],second,12);
+            line([[0,-100],[-145,20]],third,8); line([[0,-100],[145,20]],accent,8);
+            for(const x of [-145,145]){context.beginPath();context.moveTo(x-65,20);context.quadraticCurveTo(x,105,x+65,20);context.strokeStyle=second;context.lineWidth=9;context.stroke();}
+            break;
+          default:
+            const nodes=[[-180,-110],[0,-195],[175,-95],[-155,95],[45,20],[185,145],[-15,185]];
+            nodes.forEach((point,index)=>{const next=nodes[(index+2)%nodes.length];line([point,next],spectrum[index%spectrum.length],7);ring(point[0],point[1],index%2?16:23,spectrum[(index+1)%spectrum.length],9);});
+            break;
+        }
+        context.restore();
+        const shade = context.createLinearGradient(0, 0, width, 0);
+        shade.addColorStop(0, "rgba(7,6,15,0.3)");
+        shade.addColorStop(0.48, "rgba(7,6,15,0.02)");
+        shade.addColorStop(1, "rgba(7,6,15,0.22)");
+        context.fillStyle = shade;
+        context.fillRect(0, 0, width, height);
+      }
+
+      let currentGoalArtwork = null;
+      let photoRequestId = 0;
+
+      const photoCredits = document.querySelector("#photo-credits");
+      const creditedPages = new Set();
+      photoSources.forEach((photo) => {
+        if (creditedPages.has(photo.page)) return;
+        creditedPages.add(photo.page);
+        if (photoCredits.childElementCount) photoCredits.append(" · ");
+        const link = document.createElement("a");
+        link.href = photo.page;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = photo.credit;
+        photoCredits.appendChild(link);
+      });
+
+      function setGoalBackground(goalNumber) {
+        if (goalNumber === currentGoalArtwork) return;
+        currentGoalArtwork = goalNumber;
+        const requestId = ++photoRequestId;
+        if (goalNumber === null) {
+          photoLayers.forEach((layer) => layer.classList.remove("is-current"));
+          document.documentElement.style.setProperty("--photo-accent", "#19486a");
+          return;
+        }
+        const photo = photoSources[goalNumber - 1];
+        const outgoing = photoLayers.find((layer) => layer.classList.contains("is-current"));
+        if (outgoing?.src === photo.url) {
+          const position = photoPositions[(goalNumber - 1) % photoPositions.length][(goalNumber - 1) % 3];
+          outgoing.style.objectPosition = `${position[0]}% ${position[1]}%`;
+          return;
+        }
+        const incoming = photoLayers.find((layer) => layer !== outgoing) || photoLayers[0];
+        const position = photoPositions[(goalNumber - 1) % photoPositions.length][(goalNumber - 1) % 3];
+        incoming.classList.remove("is-current");
+        incoming.style.filter = "brightness(0.56) saturate(1.42) contrast(1.18) hue-rotate(8deg)";
+        incoming.style.objectPosition = `${position[0]}% ${position[1]}%`;
+        incoming.onload = () => {
+          if (requestId !== photoRequestId) return;
+          incoming.classList.add("is-current");
+          outgoing?.classList.remove("is-current");
+        };
+        incoming.onerror = () => { if (requestId === photoRequestId) currentGoalArtwork = null; };
+        incoming.src = photo.url;
+        if (incoming.complete && incoming.naturalWidth > 0) incoming.onload();
+        document.documentElement.style.setProperty("--photo-accent", "#19486a");
+      }
+
+      const earthGroup = new THREE.Group();
+      earthGroup.position.set(1.7, 0, 0);
+      scene.add(earthGroup);
+      const radius = 2.05;
+      const earthMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.84, metalness: 0.04, emissive: 0x14294a, emissiveIntensity: 0.38 });
+      const earth = new THREE.Mesh(new THREE.SphereGeometry(radius, 96, 72), earthMaterial);
+      earthGroup.add(earth);
+      window.__earthStatus = "loading";
+
+      function makeFallbackMap() {
+        const mapCanvas = document.createElement("canvas");
+        mapCanvas.width = 1024;
+        mapCanvas.height = 512;
+        const context = mapCanvas.getContext("2d");
+        const ocean = context.createLinearGradient(0, 0, 0, 512);
+        ocean.addColorStop(0, "#0568ff");
+        ocean.addColorStop(0.5, "#032fe4");
+        ocean.addColorStop(1, "#061a74");
+        context.fillStyle = ocean;
+        context.fillRect(0, 0, 1024, 512);
+        const continents = [
+          [[102,82],[146,52],[194,67],[225,100],[218,135],[196,160],[188,197],[164,228],[149,195],[133,158],[110,126]],
+          [[202,218],[235,222],[261,255],[255,292],[238,335],[220,377],[203,348],[211,306],[194,270]],
+          [[397,91],[431,71],[472,77],[510,98],[552,100],[593,126],[573,151],[538,160],[515,184],[488,170],[461,196],[434,173],[410,177],[389,142]],
+          [[464,191],[497,197],[519,228],[508,265],[490,300],[471,332],[451,307],[445,278],[431,249],[439,217]],
+          [[574,190],[606,180],[641,196],[666,222],[650,242],[626,240],[604,215]],
+          [[688,279],[720,268],[748,283],[738,304],[710,308]],
+          [[815,105],[859,85],[901,99],[920,127],[892,147],[861,134],[834,123]],
+        ];
+        const land = context.createLinearGradient(0, 0, 0, 512);
+        land.addColorStop(0, "#d4ff00");
+        land.addColorStop(0.55, "#78ff00");
+        land.addColorStop(1, "#38e981");
+        context.fillStyle = land;
+        context.strokeStyle = "#55faff";
+        context.lineWidth = 3;
+        continents.forEach((polygon) => {
+          context.beginPath();
+          polygon.forEach(([x, y], index) => index ? context.lineTo(x, y) : context.moveTo(x, y));
+          context.closePath();
+          context.fill();
+          context.stroke();
+        });
+        for (let latitude = 48; latitude < 512; latitude += 64) {
+          context.beginPath();
+          context.ellipse(512, latitude, 480, 22, 0, 0, Math.PI * 2);
+          context.strokeStyle = "rgba(77,244,255,0.1)";
+          context.lineWidth = 1;
+          context.stroke();
+        }
+        const texture = new THREE.CanvasTexture(mapCanvas);
+        texture.encoding = THREE.sRGBEncoding;
+        return texture;
+      }
+
+      function recolorMap(image) {
+        const mapCanvas = document.createElement("canvas");
+        mapCanvas.width = 2048;
+        mapCanvas.height = 1024;
+        const context = mapCanvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(image, 0, 0, mapCanvas.width, mapCanvas.height);
+        const pixels = context.getImageData(0, 0, mapCanvas.width, mapCanvas.height);
+        for (let index = 0; index < pixels.data.length; index += 4) {
+          const red = pixels.data[index];
+          const green = pixels.data[index + 1];
+          const blue = pixels.data[index + 2];
+          const land = red > blue * 1.12 || green > blue * 1.06;
+          const brightness = (red * 0.3 + green * 0.59 + blue * 0.11) / 255;
+          if (land) {
+            pixels.data[index] = Math.round(35 + brightness * 145);
+            pixels.data[index + 1] = Math.round(178 + brightness * 72);
+            pixels.data[index + 2] = Math.round(30 + brightness * 95);
+          } else {
+            pixels.data[index] = Math.round(brightness * 16);
+            pixels.data[index + 1] = Math.round(92 + brightness * 126);
+            pixels.data[index + 2] = Math.round(164 + brightness * 88);
+          }
+        }
+        context.putImageData(pixels, 0, 0);
+        const texture = new THREE.CanvasTexture(mapCanvas);
+        texture.encoding = THREE.sRGBEncoding;
+        texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+        return texture;
+      }
+
+      const earthImage = new Image();
+      earthImage.crossOrigin = "anonymous";
+      earthImage.onload = () => {
+        try {
+          earthMaterial.map = recolorMap(earthImage);
+          earthMaterial.needsUpdate = true;
+          window.__earthStatus = "texture-loaded";
+        } catch {
+          earthMaterial.map = makeFallbackMap();
+          earthMaterial.needsUpdate = true;
+          window.__earthStatus = "fallback-texture";
+        }
+      };
+      earthImage.onerror = () => {
+        earthMaterial.map = makeFallbackMap();
+        earthMaterial.needsUpdate = true;
+        window.__earthStatus = "fallback-texture";
+      };
+      earthImage.src = "https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg";
+
+      const atmosphere = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 1.045, 72, 56),
+        new THREE.MeshBasicMaterial({ color: 0x55cfff, transparent: true, opacity: 0.22, side: THREE.BackSide, depthWrite: false }),
+      );
+      earthGroup.add(atmosphere);
+      function createOrbitTrack(radiusX, radiusY, depth, tilt, color, opacity, phase) {
+        const points = [];
+        const steps = 260;
+        for (let index = 0; index <= steps; index++) {
+          const angle = phase + index / steps * Math.PI * 2;
+          points.push(new THREE.Vector3(radiusX * Math.cos(angle), radiusY * Math.sin(angle), depth * Math.sin(angle * 2)));
+        }
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineDashedMaterial({ color, dashSize: 0.12, gapSize: 0.065, transparent: true, opacity, depthWrite: false });
+        const track = new THREE.Line(geometry, material);
+        track.computeLineDistances();
+        track.rotation.set(...tilt);
+        earthGroup.add(track);
+        return track;
+      }
+      const orbit = createOrbitTrack(radius * 1.24, radius * 1.08, 0.18, [0.92, 0.34, -0.28], 0xff70c8, 0.82, -0.18);
+      const orbitTwo = createOrbitTrack(radius * 1.48, radius * 1.3, 0.32, [-0.68, -0.46, 0.62], 0x53cfff, 0.66, 0.56);
+      orbit.visible = false;
+      orbitTwo.visible = false;
+      const satelliteLooks = [
+        { glow: 0xff791f, rim: 0xff35be, facet: 0x28dfff },
+        { glow: 0xff35be, rim: 0x22d7ff, facet: 0xd4ff32 },
+        { glow: 0x22d7ff, rim: 0x6848ff, facet: 0xff781e },
+      ];
+      const glowCanvas = document.createElement("canvas");
+      glowCanvas.width = 128;
+      glowCanvas.height = 128;
+      const glowContext = glowCanvas.getContext("2d");
+      const glowGradient = glowContext.createRadialGradient(64, 64, 4, 64, 64, 64);
+      glowGradient.addColorStop(0, "rgba(255,255,255,0.92)");
+      glowGradient.addColorStop(0.16, "rgba(255,255,255,0.62)");
+      glowGradient.addColorStop(0.52, "rgba(255,255,255,0.13)");
+      glowGradient.addColorStop(1, "rgba(255,255,255,0)");
+      glowContext.fillStyle = glowGradient;
+      glowContext.fillRect(0, 0, 128, 128);
+      const glowTexture = new THREE.CanvasTexture(glowCanvas);
+      glowTexture.encoding = THREE.sRGBEncoding;
+      const artSatellites = artScenes.map(({ material: artMaterial }, index) => {
+        const look = satelliteLooks[index];
+        const satellite = new THREE.Group();
+        const glowMaterial = new THREE.SpriteMaterial({ map: glowTexture, color: look.glow, transparent: true, opacity: 0.04, blending: THREE.AdditiveBlending, depthWrite: false });
+        const glow = new THREE.Sprite(glowMaterial);
+        glow.scale.set(2.35, 2.35, 1);
+        satellite.add(glow);
+        const imageMaterial = new THREE.MeshStandardMaterial({ map: artMaterial.map, color: 0xffffff, roughness: 0.48, metalness: 0.16, emissive: look.glow, emissiveIntensity: 0.16, transparent: true, opacity: 0.12 });
+        const worldImage = new THREE.Mesh(new THREE.SphereGeometry(0.62, 48, 36), imageMaterial);
+        satellite.add(worldImage);
+        const shellMaterial = new THREE.MeshBasicMaterial({ color: look.rim, wireframe: true, transparent: true, opacity: 0.13, depthWrite: false });
+        const shell = new THREE.Mesh(new THREE.SphereGeometry(0.66, 28, 20), shellMaterial);
+        satellite.add(shell);
+        const rimMaterial = new THREE.MeshBasicMaterial({ color: look.rim, transparent: true, opacity: 0.2, depthWrite: false });
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.013, 8, 96, Math.PI * 1.55), rimMaterial);
+        rim.rotation.set(0.8, 0.42, -0.3);
+        satellite.add(rim);
+        const echoMaterial = new THREE.MeshBasicMaterial({ color: look.facet, transparent: true, opacity: 0.15, depthWrite: false });
+        const echo = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.006, 6, 96, Math.PI * 1.15), echoMaterial);
+        echo.rotation.set(-0.65, 0.5, 0.8);
+        satellite.add(echo);
+        const shards = [0, 1, 2, 3].map((shardIndex) => {
+          const shard = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.055, 0),
+            new THREE.MeshBasicMaterial({ color: shardIndex % 2 ? look.facet : look.glow, transparent: true, opacity: 0.72, depthWrite: false }),
+          );
+          satellite.add(shard);
+          return shard;
+        });
+        earthGroup.add(satellite);
+        return { group: satellite, glow, imageMaterial, shellMaterial, rimMaterial, echoMaterial, glowMaterial, rim, echo, shards, phase: index * Math.PI * 2 / 3 };
+      });
+      artSatellites.forEach(({ group }) => { group.visible = false; });
+      const baseEarthGlow = new THREE.Color(0x14294a);
+      const baseEarthTint = new THREE.Color(0xffffff);
+      const baseAtmosphereColor = new THREE.Color(0x55cfff);
+      const baseOrbitColor = new THREE.Color(0xff70c8);
+      const baseOrbitTwoColor = new THREE.Color(0x53cfff);
+      const basePinkFillColor = new THREE.Color(0xff9cda);
+      const washTarget = neutralWash.clone();
+      const earthGlowTarget = baseEarthGlow.clone();
+      const earthTintTarget = baseEarthTint.clone();
+      const atmosphereTarget = baseAtmosphereColor.clone();
+      const orbitTarget = baseOrbitColor.clone();
+      const orbitTwoTarget = baseOrbitTwoColor.clone();
+      const pinkFillTarget = basePinkFillColor.clone();
+      let washOpacityTarget = 0.06;
+
+      const starsGeometry = new THREE.BufferGeometry();
+      const starPositions = new Float32Array(260 * 3);
+      for (let index = 0; index < starPositions.length; index += 3) {
+        starPositions[index] = (Math.random() - 0.5) * 22;
+        starPositions[index + 1] = (Math.random() - 0.5) * 13;
+        starPositions[index + 2] = -3 - Math.random() * 8;
+      }
+      starsGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+      const starPalette = [0xff62b7, 0x46bdf2, 0x8c75e8, 0xe5a92e, 0x54ad5a];
+      const starColors = new Float32Array(260 * 3);
+      for (let index = 0; index < 260; index++) {
+        const color = new THREE.Color(starPalette[index % starPalette.length]);
+        color.toArray(starColors, index * 3);
+      }
+      starsGeometry.setAttribute("color", new THREE.BufferAttribute(starColors, 3));
+      const starMaterial = new THREE.PointsMaterial({ size: 0.085, vertexColors: true, transparent: true, opacity: 0.78, sizeAttenuation: true, depthWrite: false });
+      const starField = new THREE.Points(starsGeometry, starMaterial);
+      scene.add(starField);
+
+      const chapters = [...document.querySelectorAll(".chapter")];
+      const railButtons = [...document.querySelectorAll(".rail button")];
+      const progressFill = document.querySelector("#progress-fill");
+      const topIndex = document.querySelector("#top-index");
+      const sceneName = document.querySelector("#scene-name");
+      const sceneState = document.querySelector("#scene-state");
+      let scrollTarget = 0;
+      let scrollCurrent = 0;
+      let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const smoothstep = (value) => value * value * (3 - 2 * value);
+      const ramp = (value, start, end) => {
+        const amount = THREE.MathUtils.clamp((value - start) / (end - start), 0, 1);
+        return smoothstep(amount);
+      };
+      let hoveredGoal = null;
+      let activeGoalChapter = null;
+
+      function updateLayoutMode() {
+        document.documentElement.classList.toggle("compact-layout", window.innerWidth <= 760);
+      }
+      updateLayoutMode();
+
+      function applyGoalPalette(chapter) {
+        if (!chapter) {
+          washTarget.copy(neutralWash);
+          earthGlowTarget.copy(baseEarthGlow);
+          earthTintTarget.copy(baseEarthTint);
+          atmosphereTarget.copy(baseAtmosphereColor);
+          orbitTarget.copy(baseOrbitColor);
+          orbitTwoTarget.copy(baseOrbitTwoColor);
+          pinkFillTarget.copy(basePinkFillColor);
+          washOpacityTarget = 0.06;
+          document.documentElement.style.setProperty("--ambient-wash", "#080710");
+          setGoalBackground(null);
+          return;
+        }
+
+        const color = new THREE.Color(getComputedStyle(chapter).getPropertyValue("--goal-color").trim());
+        washTarget.copy(color).lerp(neutralWash, 0.55);
+        earthGlowTarget.copy(baseEarthGlow).lerp(color, 0.42);
+        earthTintTarget.copy(baseEarthTint).lerp(color, 0.28);
+        atmosphereTarget.copy(baseAtmosphereColor).lerp(color, 0.78);
+        orbitTarget.copy(color).lerp(new THREE.Color(0xffffff), 0.12);
+        orbitTwoTarget.copy(baseOrbitTwoColor).lerp(color, 0.62);
+        pinkFillTarget.copy(basePinkFillColor).lerp(color, 0.54);
+        washOpacityTarget = 0.38;
+        document.documentElement.style.setProperty("--ambient-wash", color.getStyle());
+        setGoalBackground(Number(chapter.dataset.index));
+      }
+
+      function setHoveredGoal(chapter) {
+        if (hoveredGoal && hoveredGoal !== chapter) hoveredGoal.classList.remove("is-hovered");
+        hoveredGoal = chapter;
+        chapter.classList.add("is-hovered");
+        applyGoalPalette(chapter);
+      }
+
+      function clearHoveredGoal(chapter) {
+        if (hoveredGoal !== chapter) return;
+        chapter.classList.remove("is-hovered");
+        hoveredGoal = null;
+        applyGoalPalette(activeGoalChapter);
+      }
+
+      chapters.slice(1).forEach((chapter) => {
+        const card = chapter.querySelector(".sdg-card");
+        const bubbleLayer = document.createElement("div");
+        bubbleLayer.className = "goal-bubbles";
+        bubbleLayer.setAttribute("aria-hidden", "true");
+        for (let index = 0; index < 9; index++) {
+          const bubble = document.createElement("span");
+          const size = 8 + (index % 4) * 4;
+          bubble.style.left = `${8 + (index * 29) % 84}%`;
+          bubble.style.width = `${size}px`;
+          bubble.style.height = `${size}px`;
+          bubble.style.animationDuration = `${1.45 + (index % 4) * 0.28}s`;
+          bubble.style.animationDelay = `${-(index % 6) * 0.23}s`;
+          bubble.style.setProperty("--bubble-drift", `${(index % 2 ? 1 : -1) * (8 + index * 2)}px`);
+          bubbleLayer.appendChild(bubble);
+        }
+        card.appendChild(bubbleLayer);
+        card.addEventListener("pointerenter", () => setHoveredGoal(chapter));
+        card.addEventListener("pointerleave", () => { if (!card.matches(":focus-within")) clearHoveredGoal(chapter); });
+        card.addEventListener("focusin", () => setHoveredGoal(chapter));
+        card.addEventListener("focusout", (event) => {
+          if (!card.contains(event.relatedTarget) && !card.matches(":hover")) clearHoveredGoal(chapter);
+        });
+      });
+
+      function updateScroll() {
+        const range = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+        scrollTarget = THREE.MathUtils.clamp(window.scrollY / range, 0, 1);
+        progressFill.style.width = `${scrollTarget * 100}%`;
+        let active = 0;
+        let greatestVisibility = -1;
+        chapters.forEach((chapter, index) => {
+          const bounds = chapter.getBoundingClientRect();
+          const visibleHeight = Math.max(0, Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0));
+          const visibility = visibleHeight / Math.min(bounds.height, window.innerHeight);
+          if (visibility > greatestVisibility) {
+            active = index;
+            greatestVisibility = visibility;
+          }
+        });
+        chapters.forEach((chapter, index) => chapter.classList.toggle("is-active", index === active));
+        const nextGoalChapter = active === 0 ? null : chapters[active];
+        if (nextGoalChapter !== activeGoalChapter) {
+          activeGoalChapter = nextGoalChapter;
+          if (!hoveredGoal) applyGoalPalette(activeGoalChapter);
+        }
+        railButtons.forEach((button, index) => {
+          if (index === active) button.setAttribute("aria-current", "step");
+          else button.removeAttribute("aria-current");
+        });
+        if (active === 0) {
+          topIndex.textContent = "17 Goals / Overview";
+          sceneName.textContent = "The 17 Goals";
+          sceneState.textContent = "Scroll to explore";
+        } else {
+          const goalNumber = String(active).padStart(2, "0");
+          topIndex.textContent = `Goal ${goalNumber} / 17`;
+          sceneName.textContent = `Goal ${goalNumber}`;
+          sceneState.textContent = chapters[active].querySelector(".goal-title").textContent;
+        }
+      }
+      window.addEventListener("scroll", updateScroll, { passive: true });
+      window.addEventListener("resize", updateScroll);
+      updateScroll();
+
+      railButtons.forEach((button) => button.addEventListener("click", () => {
+        chapters[Number(button.dataset.go)].scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth" });
+      }));
+      document.querySelector(".menu-button").addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+      });
+
+      const clock = new THREE.Clock();
+      let elapsed = 0;
+      function render() {
+        requestAnimationFrame(render);
+        const delta = Math.min(clock.getDelta(), 0.05);
+        elapsed += delta;
+        scrollCurrent += (scrollTarget - scrollCurrent) * (reducedMotion ? 1 : 0.075);
+        if (Math.abs(scrollTarget - scrollCurrent) < 0.0004) scrollCurrent = scrollTarget;
+
+        const progress = scrollCurrent;
+        const positionX = window.innerWidth <= 760 ? 0.1 : THREE.MathUtils.lerp(1.65, -1.5, smoothstep(progress));
+        const motionTime = reducedMotion ? 0 : elapsed;
+        artScenes.forEach(({ material }) => { material.opacity = 0; });
+        goalArtLayers.forEach(({ material }) => { material.opacity = 0; });
+        const positionY = Math.sin(progress * Math.PI * 2) * (window.innerWidth <= 760 ? 0.18 : 0.42) + Math.sin(motionTime * 0.72) * 0.035;
+        earthGroup.position.x += (positionX - earthGroup.position.x) * 0.055;
+        earthGroup.position.y += (positionY - earthGroup.position.y) * 0.055;
+        const size = (window.innerWidth <= 760 ? 0.78 : 1 + Math.sin(progress * Math.PI) * 0.08) + Math.sin(motionTime * 1.1) * 0.008;
+        earthGroup.scale.setScalar(size);
+        earthGroup.rotation.y += (progress * Math.PI * 2.1 - earthGroup.rotation.y) * (reducedMotion ? 1 : 0.075);
+        earthGroup.rotation.y += reducedMotion ? 0 : delta * 0.045;
+        earthGroup.rotation.x += ((-0.12 + progress * 0.3) - earthGroup.rotation.x) * 0.035;
+        starField.rotation.z = reducedMotion ? 0 : elapsed * 0.006;
+        starMaterial.opacity = reducedMotion ? 0.72 : 0.65 + (Math.sin(elapsed * 1.8) + 1) * 0.1;
+        const colorEase = reducedMotion ? 1 : 0.045;
+        washMaterial.color.lerp(washTarget, colorEase);
+        washMaterial.opacity += (washOpacityTarget - washMaterial.opacity) * colorEase;
+        earthMaterial.emissive.lerp(earthGlowTarget, colorEase);
+        earthMaterial.color.lerp(earthTintTarget, colorEase);
+        atmosphere.material.color.lerp(atmosphereTarget, colorEase);
+        pinkFill.color.lerp(pinkFillTarget, colorEase);
+        renderer.render(scene, camera);
+      }
+      render();
+
+      function resize() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        updateLayoutMode();
+        camera.aspect = width / height;
+        camera.position.z = width <= 760 ? 9.3 : 8.8;
+        camera.updateProjectionMatrix();
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(width, height);
+        updateScroll();
+      }
+      window.addEventListener("resize", resize);
+      window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener?.("change", (event) => { reducedMotion = event.matches; });
+    </script>
+  </body>
+</html>
